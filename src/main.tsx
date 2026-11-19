@@ -32,8 +32,7 @@ function App() {
 
   return <>
     <header className="masthead">
-      <Link className="brand" to="/"><img src="/logo.png" alt="Pretty Woman Boutique" /></Link>
-      <span className="brand-name" aria-hidden="true">Pretty Woman Boutique</span>
+      <Link className="brand-name" to="/">Pretty Woman Boutique</Link>
       <Link className="button primary cart-link" to="/carrito"
         aria-label={`Carrito, ${cartQuantity} ${cartQuantity === 1 ? 'prenda' : 'prendas'}`}>
         <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none"
