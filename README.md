@@ -10,6 +10,6 @@ El sitio estático consume el backend de Pretty Woman. Guarda el carrito en el n
 
 ## Publicación
 
-Configura `VITE_API_ORIGIN` con el origen HTTPS del backend al ejecutar `pnpm build`. Publica `dist/` y configura el alojamiento para servir `index.html` en rutas de la aplicación como `/prendas/123` y `/selecciones/…`. Se incluye un archivo `_redirects` para los alojamientos compatibles.
+Configura `VITE_API_ORIGIN` con el origen HTTPS del backend al ejecutar `pnpm build`. Cloudflare Workers publica `dist/` y sirve `index.html` en rutas como `/prendas/123` y `/selecciones/…` mediante `assets.not_found_handling` en `wrangler.jsonc`.
 
 Aplica la migración `AddSharedCatalogSelections` y configura `Catalog__Origin` en el backend con `https://catalog.prettywomanboutiquenic.com`. Verifica CORS, los enlaces de contacto y las vistas previas antes de activar el subdominio.
