@@ -5,7 +5,13 @@ export interface CartLine extends SelectionLine {
   code?: number
   imageUrl?: string | null
 }
-interface PendingLink { fingerprint: string; key: string; link?: SelectionLink }
+interface PendingLink {
+  fingerprint: string
+  itemsKey?: string
+  prices?: Readonly<Record<number, number>>
+  key: string
+  link?: SelectionLink
+}
 const cartKey = 'pretty-woman-cart-v1'
 const shareKey = 'pretty-woman-selection-v1'
 
@@ -36,13 +42,24 @@ export function readCart(): CartLine[] {
 
 export const saveCart = (lines: CartLine[]) => write(cartKey, lines)
 
-export function selectionAttempt(items: SelectionItem[], renew = false): PendingLink {
-  const fingerprint = JSON.stringify([...items].sort((a, b) => a.variantId - b.variantId))
+export function selectionAttempt(items: SelectionItem[], prices: Readonly<Record<number, number>>, options: {
+  allowCachedLink: boolean; stockConflict: boolean; renew?: boolean
+}): PendingLink {
+  const ordered = [...items].sort((a, b) => a.variantId - b.variantId)
+  const itemsKey = JSON.stringify(ordered)
+  const priceKey = JSON.stringify(ordered.map(({ variantId }) => [variantId, prices[variantId] ?? null]))
+  const fingerprint = JSON.stringify([priceKey, ordered])
   const previous = read(shareKey) as PendingLink | null
-  if (!renew && previous?.fingerprint === fingerprint && typeof previous.key === 'string' &&
-    (!previous.link || Date.parse(previous.link.expiresAt) > Date.now())) return previous
+  if (!options.renew && typeof previous?.key === 'string') {
+    const samePricesAndItems = previous.fingerprint === fingerprint
+    const compatiblePrices = Object.entries(prices).every(([id, price]) => previous.prices?.[Number(id)] === price)
+    if (!previous.link && !options.stockConflict &&
+      (samePricesAndItems || (previous.itemsKey === itemsKey && compatiblePrices))) return previous
+    if (options.allowCachedLink && samePricesAndItems && previous.link &&
+      Date.parse(previous.link.expiresAt) > Date.now()) return previous
+  }
 
-  const attempt = { key: crypto.randomUUID(), fingerprint }
+  const attempt = { key: crypto.randomUUID(), fingerprint, itemsKey, prices }
   write(shareKey, attempt)
   return attempt
 }

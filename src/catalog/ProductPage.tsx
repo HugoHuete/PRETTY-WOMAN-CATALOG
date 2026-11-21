@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { ApiError, type Detail } from './api'
 import { useRequest } from './useRequest'
 import { Price } from './Price'
@@ -7,9 +7,8 @@ import { ContactActions } from './ContactActions'
 import { shareUrl } from './contactLinks'
 import type { CartLine } from '../cart/cartStorage'
 
-export function ProductPage({ add }: { add: (line: CartLine) => string }) {
+export function ProductPage({ add, catalogHref }: { add: (line: CartLine) => string; catalogHref: string }) {
   const { productId } = useParams()
-  const { state } = useLocation()
   const { data, error } = useRequest<Detail>('/products/' + encodeURIComponent(productId ?? ''))
   const [colorId, setColorId] = useState<number>()
   const [sizeId, setSizeId] = useState<number>()
@@ -40,7 +39,7 @@ export function ProductPage({ add }: { add: (line: CartLine) => string }) {
   }
 
   return <>
-    <Link className="back" to={'/' + (typeof state?.catalog === 'string' && state.catalog.startsWith('?') ? state.catalog : '')}>← Volver al catálogo</Link>
+    <Link className="back product-back" to={catalogHref}>← Volver al catálogo</Link>
     {error ? <p role="alert">{error instanceof ApiError && error.status === 404 ? 'No encontramos esta prenda.' : 'No pudimos cargar esta prenda.'}</p>
       : !data ? <p role="status">Cargando prenda…</p> : <div className="product-detail">
         <section aria-label="Fotos de la prenda">

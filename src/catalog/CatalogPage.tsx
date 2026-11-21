@@ -8,6 +8,10 @@ import { useRequest } from './useRequest'
 const filterKeys = { categoryId: 'categoryIds', subcategoryId: 'subcategoryIds', sizeId: 'sizeIds' } as const
 type FilterKey = keyof typeof filterKeys
 
+function searchKey(value: string) {
+  return value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim()
+}
+
 function CheckOptions({ options, selected, toggle }: {
   options: Option[]; selected: string[]; toggle: (id: string) => void
 }) {
@@ -18,12 +22,36 @@ function CheckOptions({ options, selected, toggle }: {
   </label>)
 }
 
-export function CatalogPage({ filters, add }: { filters?: Filters; add: (line: CartLine) => string }) {
+export function CatalogPage({ filters, add, mobileFiltersOpen, closeMobileFilters }: {
+  filters?: Filters; add: (line: CartLine) => string; mobileFiltersOpen: boolean; closeMobileFilters: () => void
+}) {
   const [params, setParams] = useSearchParams()
+  const [categorySearch, setCategorySearch] = useState('')
   const [menuId, setMenuId] = useState<number>()
   const menu = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const navigation = useRef<HTMLElement>(null)
+  const drawer = useRef<HTMLDialogElement>(null)
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 700px)').matches)
+
+  useEffect(() => {
+    const viewport = window.matchMedia('(max-width: 700px)')
+    const update = () => setIsMobile(viewport.matches)
+    viewport.addEventListener('change', update)
+    update()
+    return () => viewport.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    const panel = drawer.current
+    if (!panel) {
+      if (mobileFiltersOpen) closeMobileFilters()
+      return
+    }
+    if (mobileFiltersOpen && !panel.open) panel.showModal()
+    if (!mobileFiltersOpen && panel.open) panel.close()
+  }, [isMobile, mobileFiltersOpen, closeMobileFilters])
+
   function selections(key: FilterKey) {
     const multiple = params.getAll(filterKeys[key])
     const single = params.get(key)
@@ -31,8 +59,22 @@ export function CatalogPage({ filters, add }: { filters?: Filters; add: (line: C
   }
 
   const categories = selections('categoryId')
-  const subcategories = selections('subcategoryId')
+  const requestedSubcategories = selections('subcategoryId')
+  const matchAnyCategory = params.get('matchAnyCategory') === 'true'
+  const wholeCategories = matchAnyCategory || !requestedSubcategories.length ? categories : []
+  // Legacy URLs intersect category and subcategory filters.
+  const subcategories = !matchAnyCategory && categories.length && requestedSubcategories.length
+    ? (filters?.categories ?? []).filter(category => categories.includes(String(category.id)))
+      .flatMap(category => category.subcategories.map(option => String(option.id)))
+      .filter(id => requestedSubcategories.includes(id))
+    : requestedSubcategories
   const sizes = selections('sizeId')
+  const search = searchKey(categorySearch)
+  const visibleCategories = filters?.categories.flatMap(category => {
+    if (searchKey(category.name).includes(search)) return [{ category, visibleChildren: category.subcategories }]
+    const visibleChildren = category.subcategories.filter(option => searchKey(option.name).includes(search))
+    return visibleChildren.length ? [{ category, visibleChildren }] : []
+  }) ?? []
   const sort = params.get('sort') ?? ''
   const sale = params.get('onSale') === 'true'
   const activeCategory = filters?.categories.find(option => categories.length === 1 && categories.includes(String(option.id)))
@@ -79,11 +121,76 @@ export function CatalogPage({ filters, add }: { filters?: Filters; add: (line: C
     setParams(next)
   }
 
+  function toggleCategory(id: string, children: string[], child?: string) {
+    const existingChildren = children.filter(value => subcategories.includes(value))
+    const whole = wholeCategories.includes(id)
+    const otherCategories = wholeCategories.filter(value => value !== id)
+    const otherChildren = subcategories.filter(value => !children.includes(value))
+    const selected = whole ? children : existingChildren
+    const chosen = child === undefined ? [] : selected.includes(child)
+      ? selected.filter(value => value !== child) : [...selected, child]
+    const chooseWhole = child === undefined && !whole
+    const next = new URLSearchParams(params)
+    for (const key of ['page', 'categoryId', 'categoryIds', 'subcategoryId', 'subcategoryIds', 'matchAnyCategory']) next.delete(key)
+    for (const value of otherCategories) next.append('categoryIds', value)
+    if (chooseWhole) next.append('categoryIds', id)
+    for (const value of [...otherChildren, ...(chooseWhole ? [] : chosen)]) next.append('subcategoryIds', value)
+    if (next.has('categoryIds') && next.has('subcategoryIds')) next.set('matchAnyCategory', 'true')
+    setParams(next)
+  }
+
   function chooseCategory(id: number, subcategoryId = '') {
     trigger.current?.focus()
     setMenuId(undefined)
-    update({ categoryId: String(id), subcategoryId })
+    update({ categoryId: String(id), subcategoryId, matchAnyCategory: '' })
   }
+
+  const filterOptions = <>
+    {filters && <>
+      <details className="filter-group">
+        <summary>Categorías</summary>
+        <input className="category-search" type="search" aria-label="Buscar categorías o subcategorías"
+          placeholder="Buscar…" value={categorySearch} onChange={event => setCategorySearch(event.target.value)} />
+        <div className="filter-options category-options">
+          {!visibleCategories.length && <p role="status">No hay coincidencias.</p>}
+          {visibleCategories.map(({ category: option, visibleChildren }) => {
+            const id = String(option.id)
+            const children = option.subcategories.map(item => String(item.id))
+            const whole = wholeCategories.includes(id)
+            const selected = whole ? children : subcategories
+            const some = !whole && children.some(child => selected.includes(child))
+            return <fieldset key={id}>
+              <legend className="visually-hidden">{option.name}</legend>
+              <label className="category-check">
+                <input type="checkbox" checked={whole} ref={input => { if (input) input.indeterminate = some }}
+                  onChange={() => toggleCategory(id, children)} />
+                {option.name}
+              </label>
+              <div className="category-children">
+                <CheckOptions options={visibleChildren} selected={selected}
+                  toggle={child => toggleCategory(id, children, child)} />
+              </div>
+            </fieldset>
+          })}
+        </div>
+      </details>
+      <details className="filter-group" open={!isMobile}>
+        <summary>Talla{sizes.length > 0 && ` (${sizes.length})`}</summary>
+        <div className="filter-options">
+          {filters.sizeGroups?.length ? filters.sizeGroups.map(group => <fieldset key={group.id}>
+            <legend>{group.name}</legend>
+            <CheckOptions options={group.sizes} selected={sizes} toggle={id => toggle('sizeId', id)} />
+          </fieldset>) : <CheckOptions options={filters.sizes} selected={sizes} toggle={id => toggle('sizeId', id)} />}
+        </div>
+      </details>
+    </>}
+    <button className="sale-filter" type="button" aria-pressed={sale}
+      onClick={() => update({ onSale: sale ? '' : 'true' })}>Descuentos</button>
+  </>
+  const clearFilters = <button className="clear-filters" type="button" onClick={() => {
+    setCategorySearch('')
+    setParams(sort ? { sort } : {})
+  }}>Limpiar filtros</button>
 
   return <>
     <nav ref={navigation} className="category-navigation" aria-label="Categorías"
@@ -96,71 +203,77 @@ export function CatalogPage({ filters, add }: { filters?: Filters; add: (line: C
         trigger.current?.focus()
         setMenuId(undefined)
       }}>
-      <div className="categories" onScroll={positionMenu}>
-        <button aria-pressed={!categories.length && !subcategories.length && !sale} onClick={() => {
-          setMenuId(undefined)
-          update({ categoryId: '', subcategoryId: '', onSale: '' })
-        }}>Todo</button>
-        {filters?.categories.map(option => <button key={option.id}
-          aria-current={categories.includes(String(option.id)) ? 'true' : undefined}
-          aria-expanded={menuId === option.id} aria-controls="catalog-subcategories"
-          onPointerEnter={event => {
-            if (event.pointerType !== 'mouse' || menu.current?.contains(document.activeElement)) return
-            openMenu(event.currentTarget, option.id)
-          }} onClick={event => {
-            openMenu(event.currentTarget, option.id)
-            if (event.detail === 0) requestAnimationFrame(() => menu.current?.querySelector('button')?.focus())
-          }}>{option.name}</button>)}
-        <button className="sale-link" aria-pressed={sale} onClick={() => {
-          setMenuId(undefined)
-          update({ categoryId: '', subcategoryId: '', onSale: sale ? '' : 'true' })
-        }}>En descuento</button>
+      <div className="category-strip">
+        <div className="categories" onScroll={positionMenu}>
+          <button aria-pressed={!categories.length && !subcategories.length && !sale} onClick={() => {
+            setMenuId(undefined)
+            update({ categoryId: '', subcategoryId: '', matchAnyCategory: '', onSale: '' })
+          }}>Todo</button>
+          {filters?.categories.map(option => <button key={option.id}
+            aria-current={categories.includes(String(option.id)) ? 'true' : undefined}
+            aria-expanded={menuId === option.id} aria-controls="catalog-subcategories"
+            onPointerEnter={event => {
+              if (event.pointerType !== 'mouse' || menu.current?.contains(document.activeElement)) return
+              openMenu(event.currentTarget, option.id)
+            }} onClick={event => {
+              openMenu(event.currentTarget, option.id)
+              if (event.detail === 0) requestAnimationFrame(() => menu.current?.querySelector<HTMLButtonElement>('.subcategory-all')?.focus())
+            }}>{option.name}</button>)}
+          <button className="sale-link" aria-pressed={sale} onClick={() => {
+            setMenuId(undefined)
+            update({ categoryId: '', subcategoryId: '', matchAnyCategory: '', onSale: sale ? '' : 'true' })
+          }}>En descuento</button>
+        </div>
       </div>
       <div id="catalog-subcategories" className="subcategories" ref={menu} hidden={!openCategory}
-        role="group" aria-label={openCategory?.name}>
+        role="group" aria-labelledby="subcategory-title">
         {openCategory && <>
-          <button aria-pressed={activeCategory?.id === openCategory.id && !subcategories.length}
-            onClick={() => chooseCategory(openCategory.id)}>Ver todo</button>
-          {openCategory.subcategories.map(option => <button key={option.id}
-            aria-pressed={subcategories.includes(String(option.id))}
-            onClick={() => chooseCategory(openCategory.id, String(option.id))}>{option.name}</button>)}
+          <div className="subcategory-header">
+            <span id="subcategory-title">{openCategory.name}</span>
+            <button className="subcategory-close" type="button" aria-label="Cerrar subcategorías"
+              onClick={() => {
+                trigger.current?.focus()
+                setMenuId(undefined)
+              }}><span aria-hidden="true">×</span></button>
+          </div>
+          <button className="subcategory-all" aria-pressed={activeCategory?.id === openCategory.id && !subcategories.length}
+            onClick={() => chooseCategory(openCategory.id)}>Ver todo <span aria-hidden="true">›</span></button>
+          <div className="subcategory-options" key={openCategory.id}>
+            {openCategory.subcategories.map(option => <button key={option.id}
+              aria-pressed={subcategories.includes(String(option.id))}
+              onClick={() => chooseCategory(openCategory.id, String(option.id))}>{option.name}</button>)}
+          </div>
         </>}
       </div>
     </nav>
     <h1 className="visually-hidden">{activeCategory?.name ?? 'Catálogo'}</h1>
+    {isMobile && <dialog id="catalog-filters" ref={drawer} className="mobile-filter-drawer"
+      aria-labelledby="mobile-filter-title" onCancel={event => {
+        event.preventDefault()
+        closeMobileFilters()
+      }} onClick={event => {
+        if (event.target === event.currentTarget) closeMobileFilters()
+      }}>
+      <div className="drawer-content">
+        <div className="drawer-header">
+          <h2 id="mobile-filter-title">Filtros</h2>
+          <button className="drawer-close" type="button" aria-label="Cerrar filtros" onClick={closeMobileFilters}>
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <div className="drawer-body">{filterOptions}</div>
+        <div className="drawer-actions">
+          {clearFilters}
+          <button className="primary" type="button" onClick={closeMobileFilters}>Ver prendas</button>
+        </div>
+      </div>
+    </dialog>}
     <div className="catalog-layout">
-      <details className="filters" open={!window.matchMedia('(max-width: 700px)').matches}>
+      {!isMobile && <details className="filters" open>
         <summary>Filtros</summary>
-        {filters && <>
-          <details className="filter-group" open>
-            <summary>Talla{sizes.length > 0 && ` (${sizes.length})`}</summary>
-            <div className="filter-options">
-              {filters.sizeGroups?.length ? filters.sizeGroups.map(group => <fieldset key={group.id}>
-                <legend>{group.name}</legend>
-                <CheckOptions options={group.sizes} selected={sizes} toggle={id => toggle('sizeId', id)} />
-              </fieldset>) : <CheckOptions options={filters.sizes} selected={sizes} toggle={id => toggle('sizeId', id)} />}
-            </div>
-          </details>
-          <details className="filter-group">
-            <summary>Categoría{categories.length > 0 && ` (${categories.length})`}</summary>
-            <div className="filter-options">
-              <CheckOptions options={filters.categories} selected={categories} toggle={id => toggle('categoryId', id)} />
-            </div>
-          </details>
-          <details className="filter-group">
-            <summary>Subcategoría{subcategories.length > 0 && ` (${subcategories.length})`}</summary>
-            <div className="filter-options">
-              {filters.categories.map(option => <fieldset key={option.id}>
-                <legend>{option.name}</legend>
-                <CheckOptions options={option.subcategories} selected={subcategories} toggle={id => toggle('subcategoryId', id)} />
-              </fieldset>)}
-            </div>
-          </details>
-        </>}
-        <label className="check"><input type="checkbox" checked={sale}
-          onChange={event => update({ onSale: event.target.checked ? 'true' : '' })} /> Solo en descuento</label>
-        <button className="text-button" onClick={() => setParams(sort ? { sort } : {})}>Limpiar filtros</button>
-      </details>
+        {filterOptions}
+        {clearFilters}
+      </details>}
       <div className="sort">
         <span role="status">{data ? data.totalCount + (data.totalCount === 1 ? ' prenda' : ' prendas') : ''}</span>
         <label>Ordenar por <select value={sort} onChange={event => update({ sort: event.target.value })}>

@@ -9,6 +9,4 @@ export function shareUrl(kind: 'prendas' | 'selecciones', id: number | string) {
   return new URL('/compartir/' + kind + '/' + id, apiOrigin || window.location.origin).href
 }
 
-export const instagramUrl = 'https://ig.me/m/prettywoman.ni'
-export const messengerUrl = 'https://m.me/prettywomanbni'
 export const whatsAppUrl = (message: string) => 'https://wa.me/50586153754?text=' + encodeURIComponent(message)

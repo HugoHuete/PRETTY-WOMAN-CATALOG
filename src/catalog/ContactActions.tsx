@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { instagramUrl, messengerUrl, whatsAppUrl } from './contactLinks'
+import { whatsAppUrl } from './contactLinks'
 
 export function ContactActions({ url, message }: { url: string; message: string }) {
   const [feedback, setFeedback] = useState('')
@@ -23,8 +23,6 @@ export function ContactActions({ url, message }: { url: string; message: string 
   return <div className="contact">
     <div className="actions">
       <a className="button primary" href={whatsAppUrl(message + ' ' + url)} target="_blank" rel="noreferrer">WhatsApp</a>
-      <a className="button" href={instagramUrl} target="_blank" rel="noreferrer">Instagram</a>
-      <a className="button" href={messengerUrl} target="_blank" rel="noreferrer">Messenger</a>
     </div>
     <div className="actions">
       <button onClick={share}>Compartir</button><button onClick={copy}>Copiar enlace</button>

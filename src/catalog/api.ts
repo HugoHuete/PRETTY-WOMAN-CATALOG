@@ -42,9 +42,10 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export function createSelection(key: string, items: SelectionItem[]) {
-  return request<SelectionLink>('/selections', {
+export function createSelection(key: string, items: SelectionItem[], signal?: AbortSignal) {
+  return request<SelectionLink>('/selections?revalidateExisting=true', {
     method: 'POST',
+    signal,
     headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key },
     body: JSON.stringify({ items }),
   })

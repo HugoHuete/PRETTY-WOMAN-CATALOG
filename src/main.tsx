@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Link, Route, Routes, useParams } from 'react-router-dom'
+import { BrowserRouter, Link, Route, Routes, useLocation, useMatch, useParams } from 'react-router-dom'
 import type { Filters } from './catalog/api'
 import { CatalogPage } from './catalog/CatalogPage'
 import { ProductPage } from './catalog/ProductPage'
@@ -10,12 +10,25 @@ import { SharedSelectionPage } from './cart/SharedSelectionPage'
 import { readCart, saveCart, type CartLine } from './cart/cartStorage'
 import './styles.css'
 
-function ProductRoute({ add }: { add: (line: CartLine) => string }) {
+function ProductRoute({ add, catalogHref }: { add: (line: CartLine) => string; catalogHref: string }) {
   const { productId } = useParams()
-  return <ProductPage key={productId} add={add} />
+  return <ProductPage key={productId} add={add} catalogHref={catalogHref} />
 }
 
 function App() {
+  const { pathname, state } = useLocation()
+  const productRoute = useMatch('/prendas/:productId')
+  const cartRoute = useMatch('/carrito')
+  const catalogHref = '/' + (typeof state?.catalog === 'string' && state.catalog.startsWith('?') ? state.catalog : '')
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const filtersButton = useRef<HTMLButtonElement>(null)
+  useEffect(() => setMobileFiltersOpen(false), [pathname])
+
+  const closeMobileFilters = useCallback(() => {
+    setMobileFiltersOpen(false)
+    filtersButton.current?.focus()
+  }, [])
+
   const [cart, setCart] = useState(readCart)
   const cartQuantity = cart.reduce((sum, line) => sum + line.quantity, 0)
   const { data: filters } = useRequest<Filters>('/filters')
@@ -32,6 +45,21 @@ function App() {
 
   return <>
     <header className="masthead">
+      {pathname === '/' && <button ref={filtersButton} className="mobile-filters-button" type="button"
+        aria-label={mobileFiltersOpen ? 'Cerrar filtros' : 'Abrir filtros'} aria-expanded={mobileFiltersOpen}
+        aria-controls="catalog-filters" aria-haspopup="dialog" onClick={() => setMobileFiltersOpen(open => !open)}>
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+          <path d={mobileFiltersOpen ? 'm6 6 12 12M18 6 6 18' : 'M4 6h16M4 12h16M4 18h16'} />
+        </svg>
+      </button>}
+      {(cartRoute || productRoute) && <Link className="mobile-catalog-back button"
+        to={productRoute ? catalogHref : '/'} aria-label="Volver al catálogo">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 12H5m7 7-7-7 7-7" />
+        </svg>
+      </Link>}
       <Link className="brand-name" to="/">Pretty Woman Boutique</Link>
       <Link className="button primary cart-link" to="/carrito"
         aria-label={`Carrito, ${cartQuantity} ${cartQuantity === 1 ? 'prenda' : 'prendas'}`}>
@@ -46,9 +74,10 @@ function App() {
     </header>
     <main>
       <Routes>
-        <Route path="/" element={<CatalogPage filters={filters} add={add} />} />
-        <Route path="/prendas/:productId" element={<ProductRoute add={add} />} />
-        <Route path="/carrito" element={<CartPage lines={cart}
+        <Route path="/" element={<CatalogPage filters={filters} add={add} mobileFiltersOpen={mobileFiltersOpen}
+          closeMobileFilters={closeMobileFilters} />} />
+        <Route path="/prendas/:productId" element={<ProductRoute add={add} catalogHref={catalogHref} />} />
+        <Route path="/carrito" element={<CartPage lines={cart} clear={() => setCart([])}
           change={(id, quantity, maxQuantity) => setCart(current => current.map(line => line.variantId === id ? { ...line, quantity, maxQuantity } : line))}
           remove={id => setCart(current => current.filter(line => line.variantId !== id))} />} />
         <Route path="/selecciones/:id" element={<SharedSelectionPage />} />
