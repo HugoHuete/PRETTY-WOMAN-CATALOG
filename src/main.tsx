@@ -46,7 +46,7 @@ function App() {
     </header>
     <main>
       <Routes>
-        <Route path="/" element={<CatalogPage filters={filters} />} />
+        <Route path="/" element={<CatalogPage filters={filters} add={add} />} />
         <Route path="/prendas/:productId" element={<ProductRoute add={add} />} />
         <Route path="/carrito" element={<CartPage lines={cart}
           change={(id, quantity, maxQuantity) => setCart(current => current.map(line => line.variantId === id ? { ...line, quantity, maxQuantity } : line))}

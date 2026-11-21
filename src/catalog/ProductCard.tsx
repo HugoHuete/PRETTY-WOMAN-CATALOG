@@ -1,15 +1,20 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import type { CartLine } from '../cart/cartStorage'
 import type { Product } from './api'
 import { Price } from './Price'
+import { QuickAdd } from './QuickAdd'
 
-export function ProductCard({ product, catalog }: { product: Product; catalog: string }) {
+export function ProductCard({ product, catalog, add, sizeIds, onSale }: {
+  product: Product; catalog: string; add: (line: CartLine) => string; sizeIds: string[]; onSale: boolean
+}) {
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [colorId, setColorId] = useState<number>()
   const colors = product.colors ?? []
   const color = colors.find(option => option.id === colorId)
   const photo = color ? color.imageUrl : product.imageUrl
 
-  return <article>
+  return <article className="product-card">
     <Link to={'/prendas/' + product.id} state={{ catalog }}>
       {photo ? <img src={photo} alt={[product.name, color?.name].filter(Boolean).join(' · ')} loading="lazy" />
         : <div className="no-photo">{color ? 'Sin foto de este color' : 'Sin foto'}</div>}
@@ -23,5 +28,13 @@ export function ProductCard({ product, catalog }: { product: Product; catalog: s
         {option.name || 'Sin color especificado'}
       </button>)}
     </div>}
+    <div className="card-actions">
+      <button className="card-add" type="button" aria-haspopup="dialog"
+        aria-label={`Agregar al carrito: código ${product.code}`} onClick={() => setQuickAddOpen(true)}>
+        Agregar al carrito
+      </button>
+    </div>
+    {quickAddOpen && <QuickAdd productId={product.id} code={product.code} colorId={colorId}
+      sizeIds={sizeIds} onSale={onSale} add={add} close={() => setQuickAddOpen(false)} />}
   </article>
 }
