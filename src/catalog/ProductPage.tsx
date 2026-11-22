@@ -24,8 +24,15 @@ export function ProductPage({ add, catalogHref }: { add: (line: CartLine) => str
   const prices = available.filter(item => selectedColorId === undefined || item.presentationId === selectedColorId)
   const availableSizes = new Set(prices.map(item => item.sizeId))
   const variant = prices.find(item => item.presentationId === selectedColorId && item.sizeId === sizeId)
-  const pictures = (data?.images ?? []).filter(image => selectedColorId === undefined ||
+  const visiblePictures = (data?.images ?? []).filter(image => selectedColorId === undefined ||
     image.presentationId === selectedColorId || (colors.size === 1 && image.presentationId === null))
+  const picturesByPresentation = new Map<number | null, Detail['images']>()
+  for (const image of visiblePictures) {
+    const group = picturesByPresentation.get(image.presentationId)
+    if (group) group.push(image)
+    else picturesByPresentation.set(image.presentationId, [image])
+  }
+  const pictures = [...picturesByPresentation.values()].flat()
   const selectedPhoto = pictures[photo]
   const cheapest = [...prices].sort((a, b) => a.finalPrice - b.finalPrice)[0]
   const amount = Number(quantity)

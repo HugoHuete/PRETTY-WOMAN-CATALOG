@@ -13,6 +13,7 @@ export function ProductCard({ product, catalog, add, sizeIds, onSale }: {
   const [colorId, setColorId] = useState<number>()
   const [previewIndex, setPreviewIndex] = useState<number>()
   const colors = product.colors ?? []
+  const namedColors = colors.filter((option): option is typeof option & { name: string } => option.name !== null)
   const pictures = colors.filter(option => option.imageUrl)
   const cover = product.imageUrl ? pictures.find(option => option.imageUrl === product.imageUrl) : undefined
   const selected = colors.find(option => option.id === colorId) ?? cover
@@ -44,10 +45,10 @@ export function ProductCard({ product, catalog, add, sizeIds, onSale }: {
     </Link>
     <Price original={product.originalPrice} final={product.finalPrice} range={product.hasPriceRange} />
     <small>{product.sizes.join(' · ')}</small>
-    {colors.length > 1 && <>
+    {namedColors.length > 0 && <>
       <div className="card-colors" role="group" aria-label={`Colores del código ${product.code}`}>
-        {colors.map(option => {
-          const name = option.name || 'Sin color especificado'
+        {namedColors.map(option => {
+          const name = option.name
           const hex = option.hexCode && /^#[0-9a-f]{6}$/i.test(option.hexCode) ? option.hexCode : undefined
           return <button key={option.id} type="button" aria-pressed={option.id === color?.id}
             className={hex ? 'color-swatch' : undefined} aria-label={name} title={name}
