@@ -7,7 +7,7 @@ export interface Filters {
 export interface Product {
   id: number; code: number; name: string; imageUrl: string | null; sizes: string[]
   originalPrice: number; finalPrice: number; hasPriceRange: boolean
-  colors?: { id: number; name: string | null; imageUrl: string | null }[]
+  colors?: { id: number; name: string | null; imageUrl: string | null; hexCode?: string | null }[]
 }
 export interface Variant {
   id: number; sizeId: number; size: string; presentationId: number; presentation: string | null
