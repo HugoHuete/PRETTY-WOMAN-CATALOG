@@ -4,7 +4,7 @@ import { ApiError, type Detail } from './api'
 import { useRequest } from './useRequest'
 import { Price } from './Price'
 import { ContactActions } from './ContactActions'
-import { shareUrl } from './contactLinks'
+import { productInquiryMessage, shareUrl } from './contactLinks'
 import type { CartLine } from '../cart/cartStorage'
 
 export function ProductPage({ add, catalogHref }: { add: (line: CartLine) => string; catalogHref: string }) {
@@ -88,8 +88,7 @@ export function ProductPage({ add, catalogHref }: { add: (line: CartLine) => str
             <p role="status">{feedback}</p>
           </>}
           <h2>Consultar por esta prenda</h2>
-          <ContactActions url={shareUrl('prendas', data.id)} message={'Hola, me interesa ' + data.name +
-            (variant ? ' · ' + [variant.size, variant.presentation].filter(Boolean).join(' · ') : '') + '.'} />
+          <ContactActions url={shareUrl('prendas', data.id)} message={productInquiryMessage(data.code, variant)} />
         </section>
       </div>}
   </>

@@ -1,8 +1,19 @@
 {
   "name": "pretty-woman-catalog",
   "compatibility_date": "2026-11-19",
+  "main": "./worker/share.mjs",
+  "keep_vars": true,
+  "observability": {
+    "logs": { "enabled": true },
+    "traces": { "enabled": true, "head_sampling_rate": 0.05 }
+  },
+  "vars": {
+    "CATALOG_API_ORIGIN": "https://api.prettywomanboutiquenic.com"
+  },
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/compartir/*"],
     "not_found_handling": "single-page-application"
   }
 }

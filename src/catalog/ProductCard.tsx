@@ -4,7 +4,7 @@ import type { CartLine } from '../cart/cartStorage'
 import type { Product } from './api'
 import { Price } from './Price'
 import { QuickAdd } from './QuickAdd'
-import { shareUrl, whatsAppUrl } from './contactLinks'
+import { productInquiryMessage, shareUrl, whatsAppUrl } from './contactLinks'
 
 export function ProductCard({ product, catalog, add, sizeIds, onSale }: {
   product: Product; catalog: string; add: (line: CartLine) => string; sizeIds: string[]; onSale: boolean
@@ -68,7 +68,7 @@ export function ProductCard({ product, catalog, add, sizeIds, onSale }: {
         </svg>
       </button>
       <a className="button card-share"
-        href={whatsAppUrl(`Hola, me interesa ${product.name}. ${shareUrl('prendas', product.id)}`)}
+        href={whatsAppUrl(productInquiryMessage(product.code) + ' ' + shareUrl('prendas', product.id))}
         target="_blank" rel="noreferrer" title="Consultar por WhatsApp"
         aria-label={`Consultar por WhatsApp: código ${product.code}`}>
         <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none"
