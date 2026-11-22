@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { CartLine } from '../cart/cartStorage'
 import type { Product } from './api'
-import { Price } from './Price'
+import { DiscountBadge, Price } from './Price'
 import { QuickAdd } from './QuickAdd'
 import { productInquiryMessage, shareUrl, whatsAppUrl } from './contactLinks'
 
@@ -32,7 +32,7 @@ export function ProductCard({ product, catalog, add, sizeIds, onSale }: {
 
   return <article className="product-card">
     <Link to={'/prendas/' + product.id} state={{ catalog }}>
-      <div onPointerEnter={event => {
+      <div className="card-photo" onPointerEnter={event => {
         if (event.pointerType !== 'mouse' || pictures.length < 2 ||
           window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
         const current = pictures.findIndex(option => option.id === selected?.id)
@@ -40,6 +40,7 @@ export function ProductCard({ product, catalog, add, sizeIds, onSale }: {
       }} onPointerLeave={() => setPreviewIndex(undefined)} onPointerCancel={() => setPreviewIndex(undefined)}>
         {photo ? <img src={photo} alt={[product.name, color?.name].filter(Boolean).join(' · ')} loading="lazy" />
           : <div className="no-photo">{color ? 'Sin foto de este color' : 'Sin foto'}</div>}
+        <DiscountBadge original={product.originalPrice} final={product.finalPrice} />
       </div>
       <h2>Código {product.code}</h2>
     </Link>

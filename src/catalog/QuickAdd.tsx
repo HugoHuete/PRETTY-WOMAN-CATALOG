@@ -23,6 +23,7 @@ export function QuickAdd({ productId, code, colorId, sizeIds, onSale, add, close
     (!sizeIds.length || sizeIds.includes(String(item.sizeId))) &&
     (!onSale || item.finalPrice < item.originalPrice)) ?? []
   const colors = new Map(variants.map(item => [item.presentationId, item.presentation]))
+  const showColor = colors.size > 1 || [...colors.values()].some(Boolean)
   const currentColor = selectedColor ?? (colorId !== undefined && colors.has(colorId) ? colorId
     : colors.size === 1 ? variants[0].presentationId : undefined)
   const colorVariants = variants.filter(item => currentColor === undefined || item.presentationId === currentColor)
@@ -60,7 +61,7 @@ export function QuickAdd({ productId, code, colorId, sizeIds, onSale, add, close
         }))
       }}>
         <div className="quick-add-options">
-          <div className="quick-add-field">
+          {showColor && <div className="quick-add-field">
             <label htmlFor="quick-add-color">Color</label>
             <select id="quick-add-color" value={currentColor ?? ''} onChange={event => {
               const id = Number(event.target.value)
@@ -75,7 +76,7 @@ export function QuickAdd({ productId, code, colorId, sizeIds, onSale, add, close
                 {color || 'Sin color especificado'}
               </option>)}
             </select>
-          </div>
+          </div>}
           <div className="quick-add-field">
             <label htmlFor="quick-add-size">Talla</label>
             <select id="quick-add-size" value={currentSize ?? ''} onChange={event => {

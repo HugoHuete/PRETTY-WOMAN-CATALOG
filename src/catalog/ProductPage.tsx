@@ -23,7 +23,8 @@ export function ProductPage({ add, catalogHref }: { add: (line: CartLine) => str
   const selectedColorId = colorId ?? (availableColors.size === 1 ? available[0].presentationId : undefined)
   const prices = available.filter(item => selectedColorId === undefined || item.presentationId === selectedColorId)
   const availableSizes = new Set(prices.map(item => item.sizeId))
-  const variant = prices.find(item => item.presentationId === selectedColorId && item.sizeId === sizeId)
+  const selectedSizeId = sizeId ?? (availableSizes.size === 1 ? prices[0].sizeId : undefined)
+  const variant = prices.find(item => item.presentationId === selectedColorId && item.sizeId === selectedSizeId)
   const visiblePictures = (data?.images ?? []).filter(image => selectedColorId === undefined ||
     image.presentationId === selectedColorId || (colors.size === 1 && image.presentationId === null))
   const picturesByPresentation = new Map<number | null, Detail['images']>()
@@ -80,7 +81,7 @@ export function ProductPage({ add, catalogHref }: { add: (line: CartLine) => str
               <fieldset className="variant-options">
                 <legend>Talla</legend>
                 {[...sizes].map(([id, size]) => <button key={id} type="button"
-                  aria-pressed={id === sizeId} disabled={!availableSizes.has(id)} onClick={() => {
+                  aria-pressed={id === selectedSizeId} disabled={!availableSizes.has(id)} onClick={() => {
                     setSizeId(id)
                     setQuantity('1')
                     setFeedback('')

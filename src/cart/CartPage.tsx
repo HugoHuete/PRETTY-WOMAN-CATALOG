@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError, createSelection, request, type Detail, type SelectionConflict } from '../catalog/api'
-import { Price } from '../catalog/Price'
+import { DiscountBadge, Price } from '../catalog/Price'
 import { money, shareUrl, whatsAppUrl } from '../catalog/contactLinks'
 import { saveSelection, selectionAttempt, type CartLine } from './cartStorage'
 
@@ -144,6 +144,8 @@ export function CartPage({ lines, change, remove, clear }: {
         <ul className="cart-items cart-editable">{pricedLines.map(({ line, variant }) => {
           const detail = details[line.productId]
           const max = detail && !variant ? 0 : unavailable[line.variantId] ?? variant?.maxQuantity ?? line.maxQuantity
+          const unitPrice = variant?.finalPrice ?? line.unitPrice
+          const originalPrice = variant?.originalPrice ?? unitPrice
           const code = line.code ?? detail?.code
           const label = code === undefined ? 'Ver prenda' : `Código ${code}`
           const presentationId = variant?.presentationId
@@ -162,7 +164,8 @@ export function CartPage({ lines, change, remove, clear }: {
                   <span className="cart-mobile-variant">Talla {line.size}{line.presentation && ` · ${line.presentation}`}</span>
                   <span className="cart-unit-price">
                     <span>Por unidad</span>
-                    <Price original={variant?.originalPrice ?? line.unitPrice} final={variant?.finalPrice ?? line.unitPrice} />
+                    <Price original={originalPrice} final={unitPrice} />
+                    <DiscountBadge original={originalPrice} final={unitPrice} />
                   </span>
                 </span>
               </Link>
@@ -176,7 +179,7 @@ export function CartPage({ lines, change, remove, clear }: {
                 if (Number.isInteger(quantity) && quantity >= 1 && quantity <= max) change(line.variantId, quantity, max)
               }} /></label>
             <div className="cart-attribute cart-subtotal"><span>Subtotal</span>
-              <strong>{money(line.quantity * (variant?.finalPrice ?? line.unitPrice))}</strong>
+              <strong>{money(line.quantity * unitPrice)}</strong>
             </div>
             <button className="cart-remove" disabled={busy}
               aria-label={`Quitar ${label}, talla ${line.size}${line.presentation ? ', color ' + line.presentation : ''}`}
