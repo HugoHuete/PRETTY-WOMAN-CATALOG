@@ -379,3 +379,19 @@ body:has(.mobile-filter-drawer[open]){overflow:hidden}
   .product-detail h1{margin-top:8px}
   .cart-items:not(.cart-editable,.cart-shared) li>div{min-width:120px}
 }
+
+.discount-announcement{
+  width:min(420px,calc(100% - 32px));
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fffdfa;
+  color:inherit;
+  padding:24px;
+  box-shadow:0 12px 36px #301b2326;
+}
+.discount-announcement::backdrop{background:#301b2359}
+.discount-announcement h2{margin:0;color:var(--rose);font-size:1.5rem}
+.discount-announcement p{margin:12px 0 20px}
+.discount-announcement time{font-weight:650}
+.discount-announcement form{display:flex;flex-wrap:wrap;gap:8px}
+.discount-announcement button{flex:1 0 auto;min-height:44px}

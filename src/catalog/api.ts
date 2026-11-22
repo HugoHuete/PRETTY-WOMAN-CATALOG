@@ -2,6 +2,7 @@ export interface Option { id: number; name: string }
 export interface Filters {
   categories: (Option & { subcategories: Option[] })[]
   sizes: Option[]
+  discountsEndDate?: string | null
   sizeGroups?: (Option & { sizes: Option[] })[]
 }
 export interface Product {

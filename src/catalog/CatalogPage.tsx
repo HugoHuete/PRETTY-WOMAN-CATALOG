@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { CartLine } from '../cart/cartStorage'
 import type { Filters, Option, Page } from './api'
+import { DiscountAnnouncement } from './DiscountAnnouncement'
 import { ProductCard } from './ProductCard'
 import { useRequest } from './useRequest'
 
@@ -193,6 +194,8 @@ export function CatalogPage({ filters, add, mobileFiltersOpen, closeMobileFilter
   }}>Limpiar filtros</button>
 
   return <>
+    <DiscountAnnouncement endDate={filters?.discountsEndDate} suppressed={sale || mobileFiltersOpen}
+      onView={() => update({ categoryId: '', subcategoryId: '', sizeId: '', matchAnyCategory: '', onSale: 'true' })} />
     <nav ref={navigation} className="category-navigation" aria-label="Categorías"
       onPointerLeave={event => {
         if (event.pointerType === 'mouse' && !menu.current?.contains(document.activeElement)) setMenuId(undefined)
